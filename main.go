@@ -7,9 +7,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sitemap-builder/parser"
 
-	"github.com/ikeikeikeike/go-sitemap-generator/stm"
+	"github.com/snabb/sitemap"
 )
 
 /*
@@ -21,7 +22,7 @@ import (
 */
 
 func main() {
-	urlFlag := flag.String("url", "https://github.com/Farber98?tab=repositories", "the url that you want to build a sitemap for")
+	urlFlag := flag.String("url", "https://www.calhoun.io", "the url that you want to build a sitemap for")
 	flag.Parse()
 
 	fmt.Println(*urlFlag)
@@ -38,7 +39,7 @@ func main() {
 
 	sm := buildXML(links, *urlFlag)
 
-	fmt.Println(string(sm.XMLContent()))
+	sm.WriteTo(os.Stdout)
 }
 
 func getWebpage(url string) ([]byte, error) {
@@ -57,14 +58,10 @@ func getWebpage(url string) ([]byte, error) {
 	return body, nil
 }
 
-func buildXML(links []parser.Link, domain string) *stm.Sitemap {
-	sm := stm.NewSitemap()
-	sm.SetDefaultHost(domain)
-
-	sm.Create()
-
+func buildXML(links []parser.Link, domain string) *sitemap.Sitemap {
+	sm := sitemap.New()
 	for _, link := range links {
-		sm.Add(stm.URL{"loc": link.Href})
+		sm.Add(&sitemap.URL{Loc: link.Href})
 	}
 	return sm
 }
