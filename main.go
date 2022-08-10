@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sitemap-builder/parser"
 )
 
 /*
@@ -19,7 +20,7 @@ import (
 */
 
 func main() {
-	urlFlag := flag.String("url", "https://gophercises.com", "the url that you want to build a sitemap for")
+	urlFlag := flag.String("url", "https://github.com/Farber98?tab=repositories", "the url that you want to build a sitemap for")
 	flag.Parse()
 
 	fmt.Println(*urlFlag)
@@ -29,7 +30,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%s", html)
+	links, err := parser.Parse(html, *urlFlag)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%+v", links)
 }
 
 func getWebpage(url string) ([]byte, error) {
@@ -37,8 +43,8 @@ func getWebpage(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
 	if res.StatusCode > 299 {
 		return nil, errors.New(fmt.Sprintf("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body))
 	}
