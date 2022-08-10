@@ -7,10 +7,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
+	"net/url"
 	"sitemap-builder/parser"
-
-	"github.com/snabb/sitemap"
+	"strings"
 )
 
 /*
@@ -21,29 +20,42 @@ import (
 	3. Print out XML
 */
 
+var linkMap = map[string]string{}
+
 func main() {
-	urlFlag := flag.String("url", "https://www.calhoun.io", "the url that you want to build a sitemap for")
+	urlFlag := flag.String("url", "https://epipe.com/", "the url that you want to build a sitemap for")
 	flag.Parse()
 
-	fmt.Println(*urlFlag)
-
-	html, err := getWebpage(*urlFlag)
+	finalLinks, err := getWebpage(*urlFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	links, err := parser.Parse(html, *urlFlag)
-	if err != nil {
-		log.Fatal(err)
+	for _, link := range finalLinks {
+		if _, ok := linkMap[link]; !ok {
+			linkMap[link] = link
+		}
 	}
 
-	sm := buildXML(links, *urlFlag)
-
-	sm.WriteTo(os.Stdout)
+	for k := range linkMap {
+		fmt.Println(k)
+	}
 }
 
-func getWebpage(url string) ([]byte, error) {
-	res, err := http.Get(url)
+func cleanLinks(links []parser.Link, domain string) (hrefs []string) {
+	for _, link := range links {
+		switch {
+		case strings.HasPrefix(link.Href, "/"):
+			hrefs = append(hrefs, domain+link.Href)
+		case strings.HasPrefix(link.Href, "http"):
+			hrefs = append(hrefs, link.Href)
+		default:
+		}
+	}
+	return
+}
+
+func getWebpage(domain string) ([]string, error) {
+	res, err := http.Get(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -55,13 +67,24 @@ func getWebpage(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return body, nil
+
+	baseUrl := &url.URL{
+		Scheme: res.Request.URL.Scheme,
+		Host:   res.Request.URL.Host,
+	}
+
+	links, _ := parser.Parse(body)
+
+	cleanLinks := cleanLinks(links, baseUrl.String())
+
+	return filter(baseUrl.String(), cleanLinks), nil
 }
 
-func buildXML(links []parser.Link, domain string) *sitemap.Sitemap {
-	sm := sitemap.New()
+func filter(base string, links []string) (filteredLinks []string) {
 	for _, link := range links {
-		sm.Add(&sitemap.URL{Loc: link.Href})
+		if strings.HasPrefix(link, base) {
+			filteredLinks = append(filteredLinks, link)
+		}
 	}
-	return sm
+	return
 }
