@@ -8,15 +8,16 @@ import (
 	"log"
 	"net/http"
 	"sitemap-builder/parser"
+
+	"github.com/ikeikeikeike/go-sitemap-generator/stm"
 )
 
 /*
 	1. Get webpage.
 	2. Parse all links on the page.
-	3. Build proper urls with our links
-	4. Filter out any links w/ different domains.
-	5. Find all pages (BFS) and repeat 1 to 4.
-	6. Print out XML
+		2.1 Build proper urls with our links
+		2.2 Filter out any links w/ different domains.
+	3. Print out XML
 */
 
 func main() {
@@ -35,7 +36,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%+v", links)
+	sm := buildXML(links, *urlFlag)
+
+	fmt.Println(string(sm.XMLContent()))
 }
 
 func getWebpage(url string) ([]byte, error) {
@@ -52,4 +55,16 @@ func getWebpage(url string) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+func buildXML(links []parser.Link, domain string) *stm.Sitemap {
+	sm := stm.NewSitemap()
+	sm.SetDefaultHost(domain)
+
+	sm.Create()
+
+	for _, link := range links {
+		sm.Add(stm.URL{"loc": link.Href})
+	}
+	return sm
 }

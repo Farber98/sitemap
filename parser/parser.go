@@ -10,9 +10,9 @@ var visited = map[string]bool{
 	"/": true,
 }
 
-type link struct {
-	href string
-	text string
+type Link struct {
+	Href string
+	Text string
 }
 
 func linkNodes(n *html.Node) []*html.Node {
@@ -39,12 +39,12 @@ func textNodes(n *html.Node) (ret string) {
 	return strings.Join(strings.Fields(ret), " ")
 }
 
-func buildLink(n *html.Node) link {
+func buildLink(n *html.Node) Link {
 	visited[n.Attr[0].Val] = true
-	return link{href: n.Attr[0].Val, text: textNodes(n)}
+	return Link{Href: n.Attr[0].Val, Text: textNodes(n)}
 }
 
-func Parse(htmlCont []byte, domain string) (linkArr []link, err error) {
+func Parse(htmlCont []byte, domain string) (linkArr []Link, err error) {
 	doc, err := html.Parse(strings.NewReader(string(htmlCont)))
 	if err != nil {
 		return nil, err
