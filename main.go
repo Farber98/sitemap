@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/xml"
 	"errors"
 	"flag"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"sitemap-builder/parser"
 	"strings"
 )
@@ -20,6 +22,14 @@ import (
 	3. Print out XML
 */
 
+type locXML struct {
+	UrlString string `xml:"loc"`
+}
+
+type urlset struct {
+	Locs []locXML `xml:"url"`
+}
+
 var linkMap = map[string]string{}
 
 func main() {
@@ -31,8 +41,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	toXML(links)
+
+}
+
+func toXML(links []string) {
+	var toXML urlset
 	for _, link := range links {
-		fmt.Println(link)
+		toXML.Locs = append(toXML.Locs, locXML{link})
+	}
+
+	fmt.Print(xml.Header)
+	enc := xml.NewEncoder(os.Stdout)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(toXML); err != nil {
+		fmt.Printf("error: %v\n", err)
 	}
 }
 
