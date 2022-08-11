@@ -24,21 +24,43 @@ var linkMap = map[string]string{}
 
 func main() {
 	urlFlag := flag.String("url", "https://epipe.com/", "the url that you want to build a sitemap for")
+	maxDepth := flag.Int("depth", 10, "maximum number of links deep to traverse")
 	flag.Parse()
 
-	finalLinks, err := getWebpage(*urlFlag)
+	links, err := bfs(*urlFlag, *maxDepth)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, link := range finalLinks {
-		if _, ok := linkMap[link]; !ok {
-			linkMap[link] = link
+	for _, link := range links {
+		fmt.Println(link)
+	}
+}
+
+func bfs(urlStr string, maxDepth int) (ret []string, err error) {
+	seen := make(map[string]struct{})
+	var q map[string]struct{}
+	nq := map[string]struct{}{urlStr: {}}
+	for i := 0; i < maxDepth; i++ {
+		q, nq = nq, make(map[string]struct{})
+
+		for url := range q {
+			if _, ok := seen[url]; ok {
+				continue
+			}
+			seen[url] = struct{}{}
+			links, err := getWebpage(url)
+			if err != nil {
+				return nil, err
+			}
+			for _, link := range links {
+				nq[link] = struct{}{}
+			}
 		}
 	}
-
-	for k := range linkMap {
-		fmt.Println(k)
+	for url := range seen {
+		ret = append(ret, url)
 	}
+	return ret, nil
 }
 
 func cleanLinks(links []parser.Link, domain string) (hrefs []string) {
